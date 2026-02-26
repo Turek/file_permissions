@@ -5,7 +5,7 @@
     "license": "GPL-2.0+",
     "require": {
         "composer/installers": "^1 || ^2",
-        "drush/drush": "^10 || ^11 || ^12"
+        "drush/drush": "^10 || ^11 || ^12 || ^13"
     },
     "extra": {
         "drush": {

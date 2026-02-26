@@ -1,0 +1,6 @@
+services:
+  file_permissions.commands:
+    class: \Drupal\file_permissions\Commands\FilePermissionsCommands
+    tags:
+      - { name: drush.command }
+

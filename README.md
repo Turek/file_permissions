@@ -45,18 +45,16 @@ drush en file_permissions
 ```
 
 ## How To Use It
-
 ```bash
 drush fp
 ```
 
-Or using the full command name:
-
+Optionally specify the web server user and group if auto-detection fails:
 ```bash
-drush file-permissions
+drush fp --user=www-data --group=www-data
 ```
 
-It is not recommended to run this with `sudo` as it will create files owned
+It is **not recommended** to run this with `sudo` as it will create files owned
 by the root user.
 
 ## Maintainers

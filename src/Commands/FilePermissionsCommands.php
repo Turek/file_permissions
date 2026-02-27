@@ -10,14 +10,24 @@ use Symfony\Component\Process\Process;
  */
 class FilePermissionsCommands extends DrushCommands {
 
-  /**
-   * Rebuild local environment file permissions.
-   *
-   * @command file-permissions
-   * @aliases fp
-   * @usage drush fp
-   */
-  public function filePermissions(): void {
+/**
+ * Rebuild local environment file permissions.
+ *
+ * @command file-permissions
+ * @aliases fp
+ * @option user
+ *   Web server user to set as owner. Auto-detected if not provided.
+ * @option group
+ *   Web server group to set as owner. Auto-detected if not provided.
+ * @usage drush fp
+ *   Auto-detect httpd user and group.
+ * @usage drush fp --user=www-data --group=www-data
+ *   Use specified user and group instead of auto-detection.
+ */
+public function filePermissions(array $options = [
+  'user' => NULL,
+  'group' => NULL,
+]): void {
     ini_set('memory_limit', -1);
 
     $ds = DIRECTORY_SEPARATOR;
@@ -71,9 +81,26 @@ class FilePermissionsCommands extends DrushCommands {
       }
     }
 
-    // Detect apache user.
-    $user = $this->getHttpdUser();
-    $group = $this->getHttpdGroup($user);
+    // Use provided httpd user or fall back to auto-detection.
+    $user = $options['user'] ?? $this->getHttpdUser();
+    if (empty($user)) {
+      $this->logger()->error(dt(
+        'Could not detect httpd user. '
+        . 'Please provide it manually: drush fp --user=www-data'
+      ));
+
+      return;
+    }
+    // Use provided httpd group or fall back to auto-detection.
+    $group = $options['group'] ?? $this->getHttpdGroup($user);
+    if (empty($group)) {
+      $this->logger()->error(dt(
+        'Could not detect httpd group. '
+        . 'Please provide it manually: drush fp --group=www-data'
+      ));
+
+      return;
+    }
 
     $this->logger()->notice(dt('httpd user: @user', ['@user' => $user]));
     $this->logger()->notice(dt('httpd group: @group', ['@group' => $group]));

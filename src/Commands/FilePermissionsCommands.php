@@ -84,17 +84,18 @@ class FilePermissionsCommands extends DrushCommands {
       $this->applyPermissions($private_dir, $user, $group);
     }
 
-    // Set settings.php to read-only.
-    $settings = $root . $ds . 'sites' . $ds . 'default' . $ds . 'settings.php';
-    if (file_exists($settings)) {
-      chmod($settings, 0444);
-    }
-
     // Ensure .htaccess files exist in public and private dirs.
-    \Drupal::service('file_system')->prepareDirectory(
+    $file_system = \Drupal::service('file_system');
+    $file_system->prepareDirectory(
       $files_dir,
       \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
     );
+    if ($private_dir !== NULL) {
+      $file_system->prepareDirectory(
+        $private_dir,
+        \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
+      );
+    }
 
     $this->logger()->success(dt('File permissions updated.'));
   }
@@ -170,13 +171,25 @@ class FilePermissionsCommands extends DrushCommands {
     $this->runSudo("chown -Rh {$owner} {$escaped}");
     $this->runSudo("chgrp -Rv {$escaped} {$escaped}");
 
-    // Set 2775 on dirs and 0664 on files.
+    // Set 2775 on dirs.
     // The setgid bit (2) preserves group on new files.
     $this->runSudo(
       "sh -c 'find {$escaped} -type d -print0 | xargs -0 chmod -R 2775'"
     );
+
+    // Set 0664 on files, excluding .htaccess and settings.php.
     $this->runSudo(
-      "sh -c 'find {$escaped} -type f -print0 | xargs -0 chmod -R 0664'"
+      "sh -c 'find {$escaped} -type f"
+      . " -not -name \".htaccess\""
+      . " -not -name \"settings.php\""
+      . " -print0 | xargs -0 chmod -R 0664'"
+    );
+
+    // Set .htaccess and settings.php files to read-only.
+    $this->runSudo(
+      "sh -c 'find {$escaped} -type f"
+      . " \\( -name \".htaccess\" -o -name \"settings.php\" \\)"
+      . " -print0 | xargs -0 chmod -R 0444'"
     );
   }
 
@@ -193,4 +206,3 @@ class FilePermissionsCommands extends DrushCommands {
   }
 
 }
-

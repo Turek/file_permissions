@@ -19,14 +19,19 @@ class FilePermissionsCommands extends DrushCommands {
  *   Web server user to set as owner. Auto-detected if not provided.
  * @option group
  *   Web server group to set as owner. Auto-detected if not provided.
+ * @option dry-run
+ *   Show what would be changed without applying any changes.
  * @usage drush fp
  *   Auto-detect httpd user and group.
  * @usage drush fp --user=www-data --group=www-data
  *   Use specified user and group instead of auto-detection.
+ * @usage drush fp --dry-run
+ *   Preview changes without applying them.
  */
 public function filePermissions(array $options = [
   'user' => NULL,
   'group' => NULL,
+  'dry-run' => FALSE,
 ]): void {
     ini_set('memory_limit', -1);
 
@@ -106,22 +111,24 @@ public function filePermissions(array $options = [
     $this->logger()->notice(dt('httpd group: @group', ['@group' => $group]));
     $this->logger()->warning(dt('You may be prompted for your sudo password.'));
 
-    $this->applyPermissions($files_dir, $user, $group);
+    $this->applyPermissions($files_dir, $user, $group, $options['dry-run']);
     if ($private_dir !== NULL) {
-      $this->applyPermissions($private_dir, $user, $group);
+      $this->applyPermissions($private_dir, $user, $group, $options['dry-run']);
     }
 
     // Ensure .htaccess files exist in public and private dirs.
-    $file_system = \Drupal::service('file_system');
-    $file_system->prepareDirectory(
-      $files_dir,
-      \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
-    );
-    if ($private_dir !== NULL) {
+    if (!$options['dry-run']) {
+      $file_system = \Drupal::service('file_system');
       $file_system->prepareDirectory(
-        $private_dir,
+        $files_dir,
         \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
       );
+      if ($private_dir !== NULL) {
+        $file_system->prepareDirectory(
+          $private_dir,
+          \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
+        );
+      }
     }
 
     $this->logger()->success(dt('File permissions updated.'));
@@ -185,23 +192,27 @@ public function filePermissions(array $options = [
    *   Owner username.
    * @param string $group
    *   Owner group.
+   * @param bool $dry_run
+   *   If TRUE, log commands without executing them.
    */
   protected function applyPermissions(
     string $dir,
     string $user,
-    string $group
+    string $group,
+    bool $dry_run = FALSE
   ): void {
     $escaped = escapeshellarg($dir);
     $owner = escapeshellarg($user . ':' . $group);
 
     // Set ownership.
-    $this->runSudo("chown -Rh {$owner} {$escaped}");
-    $this->runSudo("chgrp -Rv {$escaped} {$escaped}");
+    $this->runSudo("chown -Rh {$owner} {$escaped}", $dry_run);
+    $this->runSudo("chgrp -Rv {$escaped} {$escaped}", $dry_run);
 
     // Set 2775 on dirs.
     // The setgid bit (2) preserves group on new files.
     $this->runSudo(
-      "sh -c 'find {$escaped} -type d -print0 | xargs -0 chmod -R 2775'"
+      "sh -c 'find {$escaped} -type d -print0 | xargs -0 chmod -R 2775'",
+      $dry_run
     );
 
     // Set 0664 on files, excluding .htaccess and settings.php.
@@ -209,14 +220,16 @@ public function filePermissions(array $options = [
       "sh -c 'find {$escaped} -type f"
       . " -not -name \".htaccess\""
       . " -not -name \"settings.php\""
-      . " -print0 | xargs -0 chmod -R 0664'"
+      . " -print0 | xargs -0 chmod -R 0664'",
+      $dry_run
     );
 
     // Set .htaccess and settings.php files to read-only.
     $this->runSudo(
       "sh -c 'find {$escaped} -type f"
       . " \\( -name \".htaccess\" -o -name \"settings.php\" \\)"
-      . " -print0 | xargs -0 chmod -R 0444'"
+      . " -print0 | xargs -0 chmod -R 0444'",
+      $dry_run
     );
   }
 
@@ -225,8 +238,14 @@ public function filePermissions(array $options = [
    *
    * @param string $command
    *   Command to run (without sudo prefix).
+   * @param bool $dry_run
+   *   If TRUE, log command without executing it.
    */
-  protected function runSudo(string $command): void {
+  protected function runSudo(string $command, bool $dry_run = FALSE): void {
+    if ($dry_run) {
+      $this->logger()->notice(dt('DRY-RUN: sudo @cmd', ['@cmd' => $command]));
+      return;
+    }
     $process = Process::fromShellCommandline('sudo ' . $command);
     $process->setTty(TRUE);
     $process->run();

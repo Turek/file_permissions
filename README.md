@@ -54,6 +54,11 @@ Optionally specify the web server user and group if auto-detection fails:
 drush fp --user=www-data --group=www-data
 ```
 
+Preview changes without applying them:
+```bash
+drush fp --dry-run
+```
+
 It is **not recommended** to run this with `sudo` as it will create files owned
 by the root user.
 

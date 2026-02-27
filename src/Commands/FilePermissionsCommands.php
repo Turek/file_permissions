@@ -49,8 +49,9 @@ class FilePermissionsCommands extends DrushCommands {
       if (!file_exists($dir)) {
         if (!mkdir($dir, 0775, TRUE)) {
           $this->logger()->warning(
-            dt('Could not create directory: @dir', ['@dir' => $dir])
+            dt('Could not create directory: @dir - please create it manually: mkdir -p @dir', ['@dir' => $dir])
           );
+
           return;
         }
       }

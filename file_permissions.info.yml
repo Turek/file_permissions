@@ -3,4 +3,3 @@ type: module
 description: Drush commands for setting up local file permissions.
 package: Developer Tools
 core_version_requirement: ^9 || ^10 || ^11
-

@@ -2,6 +2,7 @@
 
 namespace Drupal\file_permissions\Commands;
 
+use Drupal\Core\File\FileSystemInterface;
 use Drush\Commands\DrushCommands;
 use Symfony\Component\Process\Process;
 
@@ -10,29 +11,31 @@ use Symfony\Component\Process\Process;
  */
 class FilePermissionsCommands extends DrushCommands {
 
-/**
- * Rebuild local environment file permissions.
- *
- * @command file-permissions
- * @aliases fp
- * @option user
- *   Web server user to set as owner. Auto-detected if not provided.
- * @option group
- *   Web server group to set as owner. Auto-detected if not provided.
- * @option dry-run
- *   Show what would be changed without applying any changes.
- * @usage drush fp
- *   Auto-detect httpd user and group.
- * @usage drush fp --user=www-data --group=www-data
- *   Use specified user and group instead of auto-detection.
- * @usage drush fp --dry-run
- *   Preview changes without applying them.
- */
-public function filePermissions(array $options = [
-  'user' => NULL,
-  'group' => NULL,
-  'dry-run' => FALSE,
-]): void {
+  /**
+   * Rebuild local environment file permissions.
+   *
+   * @command file-permissions
+   * @aliases fp
+   * @option user
+   *   Web server user to set as owner. Auto-detected if not provided.
+   * @option group
+   *   Web server group to set as owner. Auto-detected if not provided.
+   * @option dry-run
+   *   Show what would be changed without applying any changes.
+   * @usage drush fp
+   *   Auto-detect httpd user and group.
+   * @usage drush fp --user=www-data --group=www-data
+   *   Use specified user and group instead of auto-detection.
+   * @usage drush fp --dry-run
+   *   Preview changes without applying them.
+   */
+  public function filePermissions(
+    array $options = [
+      'user' => NULL,
+      'group' => NULL,
+      'dry-run' => FALSE,
+    ],
+  ): void {
     ini_set('memory_limit', -1);
 
     $ds = DIRECTORY_SEPARATOR;
@@ -93,9 +96,9 @@ public function filePermissions(array $options = [
         'Could not detect httpd user. '
         . 'Please provide it manually: drush fp --user=www-data'
       ));
-
       return;
     }
+
     // Use provided httpd group or fall back to auto-detection.
     $group = $options['group'] ?? $this->getHttpdGroup($user);
     if (empty($group)) {
@@ -103,7 +106,6 @@ public function filePermissions(array $options = [
         'Could not detect httpd group. '
         . 'Please provide it manually: drush fp --group=www-data'
       ));
-
       return;
     }
 
@@ -121,12 +123,12 @@ public function filePermissions(array $options = [
       $file_system = \Drupal::service('file_system');
       $file_system->prepareDirectory(
         $files_dir,
-        \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
+        FileSystemInterface::CREATE_DIRECTORY
       );
       if ($private_dir !== NULL) {
         $file_system->prepareDirectory(
           $private_dir,
-          \Drupal\Core\File\FileSystemInterface::CREATE_DIRECTORY
+          FileSystemInterface::CREATE_DIRECTORY
         );
       }
     }
@@ -199,7 +201,7 @@ public function filePermissions(array $options = [
     string $dir,
     string $user,
     string $group,
-    bool $dry_run = FALSE
+    bool $dry_run = FALSE,
   ): void {
     $escaped = escapeshellarg($dir);
     $owner = escapeshellarg($user . ':' . $group);

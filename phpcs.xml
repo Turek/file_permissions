@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ruleset name="file_permissions">
+  <rule ref="Drupal"/>
+  <rule ref="DrupalPractice"/>
+  <file>src</file>
+  <arg name="extensions" value="php,module,inc,install,yml"/>
+</ruleset>

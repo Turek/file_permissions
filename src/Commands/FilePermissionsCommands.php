@@ -33,27 +33,41 @@ class FilePermissionsCommands extends DrushCommands {
       }
     }
 
-    // Get private files path.
-    $private = 'sites' . $ds . 'default' . $ds . 'private';
-    $private_config = \Drupal::config('system.file')->get('path.private');
-    if (!empty($private_config)) {
-      $private = $private_config;
+    // Resolve public files absolute path.
+    $files_dir = $this->resolvePath($root, $files);
+
+    // Create public files directory if it doesn't exist.
+    if (!file_exists($files_dir)) {
+      if (!mkdir($files_dir, 0775, TRUE)) {
+        $this->logger()->warning(
+          dt('Could not create directory: @dir - please create it manually: mkdir -p @dir',
+            ['@dir' => $files_dir]
+          )
+        );
+        return;
+      }
     }
 
-    // Resolve absolute paths.
-    $files_dir = $this->resolvePath($root, $files);
-    $private_dir = $this->resolvePath($root, $private);
-
-    // Create directories if they don't exist.
-    foreach ([$files_dir, $private_dir] as $dir) {
-      if (!file_exists($dir)) {
-        if (!mkdir($dir, 0775, TRUE)) {
-          $this->logger()->warning(
-            dt('Could not create directory: @dir - please create it manually: mkdir -p @dir', ['@dir' => $dir])
-          );
-
-          return;
-        }
+    // Fix permissions on private dir only if already configured
+    // in settings.php.
+    $private_path = \Drupal::config('system.file')->get('path.private');
+    $private_dir = NULL;
+    if (empty($private_path)) {
+      $this->logger()->warning(dt(
+        'Private files directory is not configured. '
+        . 'Set $settings[\'file_private_path\'] in settings.php '
+        . 'then re-run this command if required.'
+      ));
+    }
+    else {
+      $private_dir = $this->resolvePath($root, $private_path);
+      if (!file_exists($private_dir)) {
+        $this->logger()->warning(dt(
+          'Private directory @dir does not exist. '
+          . 'Create it manually then re-run this command.',
+          ['@dir' => $private_dir]
+        ));
+        $private_dir = NULL;
       }
     }
 
@@ -63,11 +77,12 @@ class FilePermissionsCommands extends DrushCommands {
 
     $this->logger()->notice(dt('httpd user: @user', ['@user' => $user]));
     $this->logger()->notice(dt('httpd group: @group', ['@group' => $group]));
-    $this->logger()
-      ->warning(dt('You may be prompted for your sudo password.'));
+    $this->logger()->warning(dt('You may be prompted for your sudo password.'));
 
     $this->applyPermissions($files_dir, $user, $group);
-    $this->applyPermissions($private_dir, $user, $group);
+    if ($private_dir !== NULL) {
+      $this->applyPermissions($private_dir, $user, $group);
+    }
 
     // Set settings.php to read-only.
     $settings = $root . $ds . 'sites' . $ds . 'default' . $ds . 'settings.php';

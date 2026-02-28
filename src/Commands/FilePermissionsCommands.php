@@ -201,12 +201,12 @@ class FilePermissionsCommands extends DrushCommands {
 
     // Set ownership.
     $this->runSudo("chown -Rh {$owner} {$escaped}", $dry_run);
-    $this->runSudo("chgrp -Rv {$escaped} {$escaped}", $dry_run);
+    $this->runSudo("chgrp -R {$group} {$escaped}", $dry_run);
 
     // Set 2775 on dirs.
     // The setgid bit (2) preserves group on new files.
     $this->runSudo(
-      "sh -c 'find {$escaped} -type d -print0 | xargs -0 chmod -R 2775'",
+      "sh -c 'find {$escaped} -type d -print0 | xargs -0 --no-run-if-empty chmod -R 2775'",
       $dry_run
     );
 
@@ -215,7 +215,7 @@ class FilePermissionsCommands extends DrushCommands {
       "sh -c 'find {$escaped} -type f"
       . " -not -name \".htaccess\""
       . " -not -name \"settings.php\""
-      . " -print0 | xargs -0 chmod -R 0664'",
+      . " -print0 | xargs -0 --no-run-if-empty chmod -R 0664'",
       $dry_run
     );
 
@@ -223,7 +223,7 @@ class FilePermissionsCommands extends DrushCommands {
     $this->runSudo(
       "sh -c 'find {$escaped} -type f"
       . " \\( -name \".htaccess\" -o -name \"settings.php\" \\)"
-      . " -print0 | xargs -0 chmod -R 0444'",
+      . " -print0 | xargs -0 --no-run-if-empty chmod -R 0444'",
       $dry_run
     );
   }

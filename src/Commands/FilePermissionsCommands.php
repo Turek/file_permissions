@@ -5,6 +5,7 @@ namespace Drupal\file_permissions\Commands;
 use Drupal\Core\File\FileSystemInterface;
 use Drush\Commands\DrushCommands;
 use Symfony\Component\Process\Process;
+use Drupal\Core\Site\Settings;
 
 /**
  * Drush commands for file permissions.
@@ -42,15 +43,7 @@ class FilePermissionsCommands extends DrushCommands {
     $root = DRUPAL_ROOT;
 
     // Get public files path.
-    $files = 'sites' . $ds . 'default' . $ds . 'files';
-    if (\Drupal::hasService('stream_wrapper_manager')) {
-      $wrapper = \Drupal::service('stream_wrapper_manager')
-        ->getViaScheme('public');
-      if ($wrapper) {
-        $files = $wrapper->getDirectoryPath();
-      }
-    }
-
+    $files = Settings::get('file_public_path', 'sites' . $ds . 'default' . $ds . 'files');
     // Resolve public files absolute path.
     $files_dir = $this->resolvePath($root, $files);
 
@@ -68,7 +61,7 @@ class FilePermissionsCommands extends DrushCommands {
 
     // Fix permissions on private dir only if already configured
     // in settings.php.
-    $private_path = \Drupal::config('system.file')->get('path.private');
+    $private_path = Settings::get('file_private_path');
     $private_dir = NULL;
     if (empty($private_path)) {
       $this->logger()->warning(dt(
